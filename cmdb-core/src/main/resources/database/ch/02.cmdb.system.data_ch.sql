@@ -90,7 +90,8 @@ INSERT INTO `adm_basekey_cat_type` (`id_adm_basekey_cat_type`, `name`, `descript
 	(55, 'lb_instance', '负载均衡实例', 53, 3),
 	(56, 'network_link_type', '网络连接类型', 54, 3),
 	(59, 'storage_type', '存储类型', 62, 3),
-	(60, 'charge_type', '计费模式', 63, 3);
+	(60, 'charge_type', '计费模式', 63, 3),
+	(61, '静态差异化值', NULL, 64, 3);
 /*!40000 ALTER TABLE `adm_basekey_cat_type` ENABLE KEYS */;
 
 /*!40000 ALTER TABLE `adm_basekey_code` DISABLE KEYS */;
@@ -98,7 +99,6 @@ INSERT INTO `adm_basekey_code` (`id_adm_basekey`, `id_adm_basekey_cat`, `code`, 
 	(1, 1, 'app_architecture_layer', '应用架构层', NULL, '应用架构层', 1, 'active'),
 	(2, 1, 'app_develop_layer', '应用开发层', NULL, '应用开发层', 2, 'active'),
 	(3, 1, 'app_deploy_layer', '应用部署层', NULL, '应用部署层', 3, 'active'),
-	(4, 1, 'res_instance_layer', '资源实例层', NULL, '资源实例层', 4, 'active'),
 	(5, 1, 'res_planning_layer', '资源规划层', NULL, '资源规划层', 5, 'active'),
 	(6, 1, 'res_architecture_layer', '资源架构层', NULL, '资源架构层', 6, 'active'),
 	(7, 2, 'app_architecture_layer', '应用架构层', NULL, '应用架构层', 1, 'active'),
@@ -276,10 +276,10 @@ INSERT INTO `adm_ci_type` (`id_adm_ci_type`, `name`, `image_file_id`, `descripti
 	(5, '应用域', 1, '应用域', NULL, 'application_domain', 'created', 12, NULL, 1, 6, 15, NULL),
 	(6, '云厂商', 1, '公有云厂家', NULL, 'cloud_vendor', 'created', 11, NULL, 1, 5, 15, NULL),
 	(7, '集群类型', 1, '集群类型', NULL, 'cluster_type', 'created', 11, NULL, 2, 5, 15, NULL),
-	(8, '集群节点类型', 1, '集群节点类型', NULL, 'cluster_node_type', 'created', 10, NULL, 1, 4, 15, NULL),
-	(9, '资源实例类型', 1, '资源实例类型', NULL, 'resource_instance_type', 'created', 10, NULL, 2, 4, 15, NULL),
-	(10, '资源实例规格', 1, '资源实例规格', NULL, 'resource_instance_spec', 'created', 10, NULL, 3, 4, 15, NULL),
-	(11, '资源实例系统', 1, '资源实例系统', NULL, 'resource_instance_system', 'created', 10, NULL, 4, 4, 15, NULL),
+	(8, '集群节点类型', 1, '集群节点类型', NULL, 'cluster_node_type', 'created', 10, NULL, 1, 5, 15, NULL),
+	(9, '资源实例类型', 1, '资源实例类型', NULL, 'resource_instance_type', 'created', 10, NULL, 2, 5, 15, NULL),
+	(10, '资源实例规格', 1, '资源实例规格', NULL, 'resource_instance_spec', 'created', 10, NULL, 3, 5, 15, NULL),
+	(11, '资源实例系统', 1, '资源实例系统', NULL, 'resource_instance_system', 'created', 10, NULL, 4, 5, 15, NULL),
 	(12, '数据中心设计', 22, '数据中心设计', NULL, 'data_center_design', 'created', 12, NULL, 2, 6, 13, NULL),
 	(13, '网段设计', 21, '网段设计', NULL, 'network_segment_design', 'created', 12, NULL, 3, 6, 14, NULL),
 	(14, '网络区域设计', 23, '网络区域设计', NULL, 'network_zone_design', 'created', 12, NULL, 4, 6, 13, NULL),
@@ -297,12 +297,12 @@ INSERT INTO `adm_ci_type` (`id_adm_ci_type`, `name`, `image_file_id`, `descripti
 	(28, '业务区域', 19, '业务区域', NULL, 'business_zone', 'created', 11, NULL, 9, 5, 13, NULL),
 	(29, '资源集合', 20, '资源集合', NULL, 'resource_set', 'created', 11, NULL, 10, 5, 13, NULL),
 	(30, '路由', 10, '路由', NULL, 'route', 'created', 11, NULL, 11, 5, 14, NULL),
-	(31, 'IP地址', 14, 'IP地址', NULL, 'ip_address', 'created', 10, NULL, 5, 4, 14, NULL),
-	(32, '主机资源实例', 12, '主机资源实例', NULL, 'host_resource_instance', 'created', 10, NULL, 6, 4, 13, NULL),
-	(33, '数据库资源实例', 12, '数据库资源实例', NULL, 'rdb_resource_instance', 'created', 10, NULL, 7, 4, 13, NULL),
-	(34, '缓存资源实例', 12, '缓存资源实例', NULL, 'cache_resource_instance', 'created', 10, NULL, 8, 4, 13, NULL),
-	(35, '负载均衡资源实例', 12, '负载均衡资源实例', NULL, 'lb_resource_instance', 'created', 10, NULL, 9, 4, 13, NULL),
-	(36, '块存储', 13, '块存储', NULL, 'block_storage', 'created', 10, NULL, 10, 4, 13, NULL),
+	(31, 'IP地址', 14, 'IP地址', NULL, 'ip_address', 'created', 10, NULL, 5, 5, 14, NULL),
+	(32, '主机资源实例', 12, '主机资源实例', NULL, 'host_resource_instance', 'created', 10, NULL, 6, 5, 13, NULL),
+	(33, '数据库资源实例', 12, '数据库资源实例', NULL, 'rdb_resource_instance', 'created', 10, NULL, 7, 5, 13, NULL),
+	(34, '缓存资源实例', 12, '缓存资源实例', NULL, 'cache_resource_instance', 'created', 10, NULL, 8, 5, 13, NULL),
+	(35, '负载均衡资源实例', 12, '负载均衡资源实例', NULL, 'lb_resource_instance', 'created', 10, NULL, 9, 5, 13, NULL),
+	(36, '块存储', 13, '块存储', NULL, 'block_storage', 'created', 10, NULL, 10, 5, 13, NULL),
 	(37, '应用系统设计', 1, '应用系统设计', NULL, 'app_system_design', 'created', 7, NULL, 3, 1, 13, NULL),
 	(38, '子系统设计', 2, '子系统设计', NULL, 'subsys_design', 'created', 7, NULL, 4, 1, 13, NULL),
 	(39, '单元设计', 3, '单元设计', NULL, 'unit_design', 'created', 7, NULL, 5, 1, 13, NULL),
@@ -321,10 +321,10 @@ INSERT INTO `adm_ci_type` (`id_adm_ci_type`, `name`, `image_file_id`, `descripti
 	(52, '缓存实例', 15, '缓存实例', NULL, 'cache_instance', 'created', 9, NULL, 9, 3, 13, NULL),
 	(53, '负载均衡实例', 15, '负载均衡实例', NULL, 'lb_instance', 'created', 9, NULL, 10, 3, 13, NULL),
 	(54, '网络连接类型', 1, '网络连接类型', NULL, 'network_link_type', 'created', NULL, NULL, 1, 5, 15, NULL),
-	(62, '存储类型', 13, '存储类型', NULL, 'storage_type', 'created', NULL, NULL, 2, 4, 15, NULL),
-	(63, '计费模式', 19, '计费模式', NULL, 'charge_type', 'created', NULL, NULL, 3, 4, 15, NULL);
+	(62, '存储类型', 13, '存储类型', NULL, 'storage_type', 'created', NULL, NULL, 2, 5, 15, NULL),
+	(63, '计费模式', 19, '计费模式', NULL, 'charge_type', 'created', NULL, NULL, 3, 5, 15, NULL),
+	(64, '静态差异化值', 2, '静态差异化值', NULL, 'static_diff_conf_value', 'created', NULL, NULL, 4, 2, 13, NULL);
 /*!40000 ALTER TABLE `adm_ci_type` ENABLE KEYS */;
-
 
 /*!40000 ALTER TABLE `adm_ci_type_attr_base` DISABLE KEYS */;
 INSERT INTO `adm_ci_type_attr_base` (`id_adm_ci_type_attr`, `id_adm_ci_type`, `name`, `description`, `input_type`, `property_name`, `property_type`, `length`, `reference_id`, `reference_name`, `reference_type`, `filter_rule`, `search_seq_no`, `display_type`, `display_seq_no`, `edit_is_null`, `edit_is_only`, `edit_is_hiden`, `edit_is_editable`, `is_defunct`, `special_logic`, `status`, `is_system`, `is_access_controlled`, `is_auto`, `auto_fill_rule`, `regular_expression_rule`, `is_refreshable`) VALUES
@@ -372,9 +372,6 @@ INSERT INTO `adm_integrate_template_relation` (`id_relation`, `child_alias_id`, 
 	(2, 3, 463, 2, 0),
 	(3, 4, 481, 3, 0);
 /*!40000 ALTER TABLE `adm_integrate_template_relation` ENABLE KEYS */;
-
-/*!40000 ALTER TABLE `adm_log` DISABLE KEYS */;
-/*!40000 ALTER TABLE `adm_log` ENABLE KEYS */;
 
 /*!40000 ALTER TABLE `adm_menu` DISABLE KEYS */;
 INSERT INTO `adm_menu` (`id_adm_menu`, `name`, `other_name`, `url`, `seq_no`, `remark`, `parent_id_adm_menu`, `class_path`, `is_active`) VALUES
@@ -566,7 +563,8 @@ INSERT INTO `adm_role_ci_type` (`id_adm_role_ci_type`, `id_adm_role`, `id_adm_ci
 	(521, 11, 53, '负载均衡实例', 'N', 'N', 'N', 'N', 'N', 'N'),
 	(522, 11, 54, '节点类型', 'N', 'N', 'N', 'N', 'N', 'N'),
 	(523, 1, 62, '存储类型', 'Y', 'Y', 'Y', 'Y', 'Y', 'N'),
-	(524, 1, 63, '计费模型', 'Y', 'Y', 'Y', 'Y', 'Y', 'N');
+	(524, 1, 63, '计费模型', 'Y', 'Y', 'Y', 'Y', 'Y', 'N'),
+	(525, 1, 64, '静态差异化值', 'Y', 'Y', 'Y', 'Y', 'Y', 'N');
 /*!40000 ALTER TABLE `adm_role_ci_type` ENABLE KEYS */;
 
 /*!40000 ALTER TABLE `adm_role_ci_type_ctrl_attr` DISABLE KEYS */;
@@ -647,60 +645,60 @@ INSERT INTO `adm_role_user` (`id_adm_role_user`, `id_adm_role`, `id_adm_user`, `
 INSERT INTO `adm_sequence` (`id_adm_sequence`, `seq_name`, `current_val`, `increment_val`, `length_limitation`, `left_zero_padding`) VALUES
 	(1, 'manage_role', 1, 1, 8, 'N'),
 	(2, 'data_center_design', 1, 1, 8, 'N'),
-	(3, 'network_segment_design', 26, 1, 8, 'N'),
+	(3, 'network_segment_design', 32, 1, 8, 'N'),
 	(4, 'network_zone_design', 7, 1, 8, 'N'),
-	(5, 'application_domain', 2, 1, 8, 'N'),
-	(6, 'business_zone_design', 6, 1, 8, 'N'),
-	(7, 'unit_type', 6, 1, 8, 'N'),
-	(8, 'resource_set_design', 19, 1, 8, 'N'),
+	(5, 'application_domain', 3, 1, 8, 'N'),
+	(6, 'business_zone_design', 10, 1, 8, 'N'),
+	(7, 'unit_type', 12, 1, 8, 'N'),
+	(8, 'resource_set_design', 28, 1, 8, 'N'),
 	(9, 'resource_set_invoke_design', 16, 1, 8, 'N'),
-	(10, 'network_link_design', 11, 1, 8, 'N'),
-	(11, 'default_security_policy_design', 24, 1, 8, 'N'),
+	(10, 'network_link_design', 14, 1, 8, 'N'),
+	(11, 'default_security_policy_design', 71, 1, 8, 'N'),
 	(12, 'network_zone_route_design', 0, 1, 8, 'N'),
 	(13, 'resource_set_route_design', 0, 1, 8, 'N'),
-	(14, 'cloud_vendor', 2, 1, 8, 'N'),
+	(14, 'cloud_vendor', 6, 1, 8, 'N'),
 	(15, 'deploy_environment', 2, 1, 8, 'N'),
 	(16, 'data_center', 6, 1, 8, 'N'),
-	(17, 'network_segment', 45, 1, 8, 'N'),
-	(18, 'network_zone', 5, 1, 8, 'N'),
-	(19, 'business_zone', 9, 1, 8, 'N'),
-	(20, 'cluster_type', 6, 1, 8, 'N'),
-	(21, 'cluster_node_type', 4, 1, 8, 'N'),
-	(22, 'resource_set', 30, 1, 8, 'N'),
-	(23, 'ip_address', 114, 1, 8, 'N'),
-	(24, 'resource_instance_type', 8, 1, 8, 'N'),
-	(25, 'resource_instance_system', 5, 1, 8, 'N'),
-	(26, 'resource_instance_spec', 11, 1, 8, 'N'),
-	(27, 'host_resource_instance', 6, 1, 8, 'N'),
-	(28, 'network_link_type', 2, 1, 8, 'N'),
+	(17, 'network_segment', 65, 1, 8, 'N'),
+	(18, 'network_zone', 11, 1, 8, 'N'),
+	(19, 'business_zone', 15, 1, 8, 'N'),
+	(20, 'cluster_type', 14, 1, 8, 'N'),
+	(21, 'cluster_node_type', 8, 1, 8, 'N'),
+	(22, 'resource_set', 63, 1, 8, 'N'),
+	(23, 'ip_address', 119, 1, 8, 'N'),
+	(24, 'resource_instance_type', 22, 1, 8, 'N'),
+	(25, 'resource_instance_system', 14, 1, 8, 'N'),
+	(26, 'resource_instance_spec', 32, 1, 8, 'N'),
+	(27, 'host_resource_instance', 8, 1, 8, 'N'),
+	(28, 'network_link_type', 10, 1, 8, 'N'),
 	(29, 'rdb_resource_instance', 3, 1, 8, 'N'),
-	(30, 'lb_resource_instance', 2, 1, 8, 'N'),
-	(31, 'app_system_design', 4, 1, 8, 'N'),
-	(32, 'subsys_design', 13, 1, 8, 'N'),
-	(33, 'unit_design', 21, 1, 8, 'N'),
-	(34, 'invoke_design', 28, 1, 8, 'N'),
-	(35, 'service_design', 1, 1, 8, 'N'),
-	(36, 'service_invoke_design', 1, 1, 8, 'N'),
+	(30, 'lb_resource_instance', 5, 1, 8, 'N'),
+	(31, 'app_system_design', 6, 1, 8, 'N'),
+	(32, 'subsys_design', 15, 1, 8, 'N'),
+	(33, 'unit_design', 25, 1, 8, 'N'),
+	(34, 'invoke_design', 31, 1, 8, 'N'),
+	(35, 'service_design', 3, 1, 8, 'N'),
+	(36, 'service_invoke_design', 3, 1, 8, 'N'),
 	(37, 'legal_person', 1, 1, 8, 'N'),
-	(38, 'app_system', 4, 1, 8, 'N'),
-	(39, 'subsys', 13, 1, 8, 'N'),
-	(40, 'unit', 21, 1, 8, 'N'),
-	(41, 'app_instance', 10, 1, 8, 'N'),
-	(42, 'network_link', 6, 1, 8, 'N'),
-	(43, 'route_design', 15, 1, 8, 'N'),
+	(38, 'app_system', 5, 1, 8, 'N'),
+	(39, 'subsys', 15, 1, 8, 'N'),
+	(40, 'unit', 25, 1, 8, 'N'),
+	(41, 'app_instance', 12, 1, 8, 'N'),
+	(42, 'network_link', 28, 1, 8, 'N'),
+	(43, 'route_design', 21, 1, 8, 'N'),
 	(44, 'route', 2, 1, 8, 'N'),
 	(45, 'default_security_policy', 14, 1, 8, 'N'),
-	(46, 'rdb_instance', 3, 1, 8, 'N'),
-	(47, 'lb_instance', 4, 1, 8, 'N'),
-	(48, 'invoke', 28, 1, 8, 'N'),
-	(49, 'deploy_package', 1, 1, 8, 'N'),
-	(50, 'diff_configuration', 0, 1, 8, 'N'),
+	(46, 'rdb_instance', 4, 1, 8, 'N'),
+	(47, 'lb_instance', 6, 1, 8, 'N'),
+	(48, 'invoke', 31, 1, 8, 'N'),
+	(49, 'deploy_package', 3, 1, 8, 'N'),
+	(50, 'diff_configuration', 8, 1, 8, 'N'),
 	(51, 'cache_resource_instance', 1, 1, 8, 'N'),
-	(52, 'block_storage', 0, 1, 8, 'N'),
-	(53, 'service_invoke_seq_design', 0, 1, 8, 'N'),
+	(52, 'block_storage', 1, 1, 8, 'N'),
+	(53, 'service_invoke_seq_design', 1, 1, 8, 'N'),
 	(54, 'cache_instance', 1, 1, 8, 'N'),
-	(55, 'charge_type', 2, 1, 8, 'N'),
-	(56, 'storage_type', 8, 1, 8, 'N');
+	(55, 'charge_type', 4, 1, 8, 'N'),
+	(56, 'storage_type', 24, 1, 8, 'N');
 /*!40000 ALTER TABLE `adm_sequence` ENABLE KEYS */;
 
 /*!40000 ALTER TABLE `adm_state_transition` DISABLE KEYS */;
@@ -765,4 +763,16 @@ INSERT INTO `adm_state_transition` (`id_adm_state_transition`, `current_state`, 
 	(58, 40, 1, 42, 0, 46, 53, 'active'),
 	(59, 42, 0, 40, 1, 47, 55, 'active');
 /*!40000 ALTER TABLE `adm_state_transition` ENABLE KEYS */;
+
+/*!40000 ALTER TABLE `adm_tenement` DISABLE KEYS */;
+/*!40000 ALTER TABLE `adm_tenement` ENABLE KEYS */;
+
+/*!40000 ALTER TABLE `adm_user` DISABLE KEYS */;
+INSERT INTO `adm_user` (`id_adm_user`, `name`, `code`, `encrypted_password`, `description`, `id_adm_tenement`, `action_flag`, `is_system`) VALUES
+	(1, 'admin', 'admin', '$2a$10$Gh3WDwZ8kFpxbmo/h.oywuN.LuYwgrlx53ZeG.mz7P4eKgct7IYZm', 'admin', NULL, 0, 1),
+	(2, 'Jordan Zhang', 'jordan', '$2a$10$N7CQen.5UtFbEIPBYWhfgOnAg73h0YbLQjr2ivVuEeDATghfuZea.', 'CMDB Admin', NULL, NULL, NULL),
+	(3, 'Monkey', 'monkey', '$2a$10$N7CQen.5UtFbEIPBYWhfgOnAg73h0YbLQjr2ivVuEeDATghfuZea.', 'CMDB Developer', NULL, NULL, NULL),
+	(4, 'Chaney Liu', 'chaneyliu', '$2a$10$N7CQen.5UtFbEIPBYWhfgOnAg73h0YbLQjr2ivVuEeDATghfuZea.', 'CMDB Architect', NULL, NULL, NULL);
+/*!40000 ALTER TABLE `adm_user` ENABLE KEYS */;
+
 SET FOREIGN_KEY_CHECKS=1;
