@@ -1,5 +1,6 @@
 package com.webank.plugins.wecmdb.dto.wecube;
 
+import com.fasterxml.jackson.annotation.JsonRawValue;
 import com.webank.cmdb.dto.CustomResponseDto;
 
 public class WecubeResponse implements CustomResponseDto{
@@ -8,6 +9,7 @@ public class WecubeResponse implements CustomResponseDto{
 
     private String status;
     private String message;
+    @JsonRawValue
     private Object data;
 
     public String getStatus() {

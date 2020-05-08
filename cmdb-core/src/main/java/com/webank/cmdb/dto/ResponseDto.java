@@ -2,6 +2,7 @@ package com.webank.cmdb.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonRawValue;
 
 @JsonInclude(Include.NON_NULL)
 public class ResponseDto<T> {
@@ -13,6 +14,8 @@ public class ResponseDto<T> {
 
     private String statusCode;
     private String statusMessage;
+
+    @JsonRawValue
     private T data;
 
     public ResponseDto() {
