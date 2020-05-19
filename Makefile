@@ -6,6 +6,7 @@ remote_docker_image_registry=ccr.ccs.tencentyun.com/webankpartners/wecmdb-app
 
 
 clean:
+    rm -rf $(current_dir)/cmdb-core/src/main/resources/static
 	rm -rf $(current_dir)/cmdb-core/target
 	rm -rf $(current_dir)/cmdb-ui/node
 	rm -rf $(current_dir)/cmdb-ui/node_modules
