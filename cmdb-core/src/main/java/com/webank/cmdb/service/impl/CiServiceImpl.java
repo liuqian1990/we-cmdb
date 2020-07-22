@@ -28,10 +28,7 @@ import java.util.Stack;
 import java.util.TimeZone;
 import java.util.stream.Collectors;
 
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.EntityTransaction;
-import javax.persistence.TypedQuery;
+import javax.persistence.*;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Expression;
@@ -805,17 +802,6 @@ public class CiServiceImpl implements CiService {
             }
         }
 
-        // check if all not null field has value
-        /*
-         * attrs.forEach(x -> { if (CmdbConstants.IS_SYSTEM_NO.equals(x.getIsSystem())
-         * && x.getEditIsNull() != null && x.getEditIsNull() == 0 &&
-         * ciData.get(x.getPropertyName()) == null) { if(isUpdateReq == false) { throw
-         * new InvalidArgumentException(String.format("Attribute [%s] can not be null.",
-         * x.getPropertyName())); } else if(ciData.containsKey(x.getPropertyName())) {
-         * //update requst contain no allow null field throw new
-         * InvalidArgumentException(String.format("Attribute [%s] can not be null.",
-         * x.getPropertyName())); } } });
-         */
     }
 
     private Map<String, AdmCiTypeAttr> convertAttrMap(List<AdmCiTypeAttr> attrs) {
@@ -971,6 +957,11 @@ public class CiServiceImpl implements CiService {
             });
         }
         return cis;
+    }
+
+    @Override
+    public PriorityEntityManager getPriorityEntityManager() {
+        return new PriorityEntityManager(entityManagerFactory);
     }
 
     @OperationLogPointcut(operation = Modification, objectClass = CiData.class)
@@ -1221,7 +1212,7 @@ public class CiServiceImpl implements CiService {
         List<ExceptionHolder> exceptionHolders = new LinkedList<ExceptionHolder>();
 
         validateDynamicEntityManager();
-        DynamicEntityMeta entityMeta = getDynamicEntityMetaMap().get(ciTypeId);
+//        DynamicEntityMeta entityMeta = getDynamicEntityMetaMap().get(ciTypeId);
 
         PriorityEntityManager priEntityManager = getEntityManager();
         EntityManager entityManager = priEntityManager.getEntityManager();
@@ -1325,63 +1316,12 @@ public class CiServiceImpl implements CiService {
             logger.debug("Integate query request, intQuerId:{}, query request:{}", intQueryId, JsonUtil.toJsonString(intQueryReq));
         }
 
-        List<FieldInfo> selectedFields = new LinkedList<>();
-        List<Filter> srcFilters = null;
-        try {
-            srcFilters = CollectionUtils.clone(intQueryReq.getFilters(), Lists.newLinkedList());
-        } catch (CloneNotSupportedException e) {
-            throw new ServiceException("Failed to clone int query filters.", e);
-        }
-
         IntegrationQueryDto intQueryDto = intQueryService.getIntegrationQuery(intQueryId);
         if (logger.isDebugEnabled()) {
             logger.debug("Integration query [{}] integrate query Dto:{}, queryReq:{}", intQueryId, JsonUtil.toJsonString(intQueryDto), JsonUtil.toJsonString(intQueryReq));
         }
 
-        List resultList = doIntegrateQuery(intQueryDto, intQueryReq, true, selectedFields);
-        int totalCount = convertResultToInteger(resultList);
-
-        intQueryReq.setFilters(srcFilters);
-        resultList = doIntegrateQuery(intQueryDto, intQueryReq, false, selectedFields);
-
-        List<Expression> selections = new LinkedList<>();
-        selectedFields.forEach(x -> {
-        	if(!selections.contains(x.getExpression())) {
-        		selections.add(x.getExpression());
-        	}
-        });
-
-        List<Map<String, Object>> results = new LinkedList<>();
-        // muti columns result
-        if (selections.size() > 1) {
-            List<Object[]> rows = resultList;
-            for (int i = 0; i < rows.size(); i++) {
-                Object[] obj = rows.get(i);
-                results.add(convertResponse(selections, obj, selectedFields));
-            }
-        } else {
-            List<Object> rows = resultList;
-            if (rows.size() > 0) {
-                for (Object val : rows) {
-                    Object[] singleVal = new Object[] { val };
-                    results.add(convertResponse(selections, singleVal, selectedFields));
-                }
-            } else {
-                results.add(convertResponse(selections, rows.toArray(), selectedFields));
-            }
-            /*
-             * rows.forEach(x -> { Map<String,Object> rowMap = new HashMap<>();
-             * rowMap.put(selections.get(0).getAlias(), x); results.add(rowMap); });
-             */
-        }
-
-        QueryResponse response = new QueryResponse(null, results);
-        setupPageInfo(intQueryReq, totalCount, response);
-
-        if (logger.isDebugEnabled()) {
-            logger.debug("Return integrate response:{}", JsonUtil.toJsonString(response));
-        }
-        return response;
+        return doIntegrateQuery(intQueryDto, intQueryReq);
     }
 
     private void setupPageInfo(QueryRequest intQueryReq, int totalCount, QueryResponse headerResponse) {
@@ -1397,7 +1337,7 @@ public class CiServiceImpl implements CiService {
         return Integer.valueOf(strVal);
     }
 
-    private List doIntegrateQuery(IntegrationQueryDto intQueryDto, QueryRequest intQueryReq, boolean isSelRowCount, List<FieldInfo> selectedFields) {
+    private List doIntegrateQueryAsFlat(IntegrationQueryDto intQueryDto, QueryRequest intQueryReq, boolean isSelRowCount, List<FieldInfo> selectedFields) {
 
         PriorityEntityManager priEntityManager = getEntityManager();
         EntityManager entityManager = priEntityManager.getEntityManager();
@@ -1408,13 +1348,9 @@ public class CiServiceImpl implements CiService {
 
             Map<String, FieldInfo> selFieldMap = new LinkedHashMap<>();
 
-            boolean enableBiz = false;
 
-            // TODO, enable Bizkey & status logic should be removed
-            enableBiz = checkBizEnable(intQueryReq);
-            logger.info("enable biz:{}", enableBiz);
-            buildIntQuery(null, null, intQueryDto, query, selFieldMap, enableBiz, null);
-            validateIntQueryFilter(intQueryReq, selFieldMap, enableBiz);
+            buildIntQuery(null, null, intQueryDto, query, selFieldMap, null);
+            validateIntQueryFilter(intQueryReq, selFieldMap);
             List<Expression> selections = new LinkedList<>();
 
             if (isSelRowCount) {
@@ -1424,11 +1360,6 @@ public class CiServiceImpl implements CiService {
                 selFieldMap.remove("root");
                 for (Map.Entry<String, FieldInfo> kv : selFieldMap.entrySet()) {
                     if (isRequestField(intQueryReq, kv)) {
-                        if (enableBiz) {
-                            if (kv.getKey().endsWith(".biz_key") || kv.getKey().endsWith(".state")) {
-                                continue;
-                            }
-                        }
                         if (kv.getKey().startsWith(ACCESS_CONTROL_ATTRIBUTE_PREFIX)) {
                             continue;
                         }
@@ -1438,12 +1369,6 @@ public class CiServiceImpl implements CiService {
                                 continue;
                             }
                         }
-
-/*
-                        if(!isRequestField(intQueryReq,kv)){
-                            continue;
-                        }
-*/
 
                         selectedFields.add(kv.getValue());
                         if (!selections.contains(kv.getValue().getExpression())) {
@@ -1465,11 +1390,6 @@ public class CiServiceImpl implements CiService {
                 JpaQueryUtils.applySorting(intQueryReq.getSorting(), cb, query, selectionMap);
             }
 
-            // TODO: enable biz logic should be removed
-            if (enableBiz) {
-                processBizFilters(intQueryReq, selectionMap);
-            }
-
             List<Predicate> predicates = buildHistoryDataControlPredicate(intQueryReq, cb, selectionMap);
 
             Predicate accessControlPredicate = buildAccessControlPredicate(cb, selFieldMap, selectionMap);
@@ -1487,6 +1407,266 @@ public class CiServiceImpl implements CiService {
         } finally {
             priEntityManager.close();
         }
+    }
+
+    private List doIntegrateQueryAsTree(IntegrationQueryDto intQueryDto, QueryRequest intQueryReq, List<FieldInfo> selectedFields) {
+        PriorityEntityManager priEntityManager = getEntityManager();
+        EntityManager entityManager = priEntityManager.getEntityManager();
+
+        try {
+            CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+
+            int curCiTypeId = intQueryDto.getCiTypeId();
+            DynamicEntityMeta entityMeta = getDynamicEntityMetaMap().get(curCiTypeId);
+            CriteriaQuery query = cb.createQuery(entityMeta.getEntityClazz());
+            EntityGraph rootEg = entityManager.createEntityGraph(entityMeta.getEntityClazz());
+
+            Map<String, FieldInfo> selFieldMap = new LinkedHashMap<>();
+
+            buildIntQueryAsTree(null, null, intQueryDto, query, selFieldMap, null, rootEg, null);
+            validateIntQueryFilter(intQueryReq, selFieldMap);
+            List<Expression> selections = new LinkedList<>();
+
+            selFieldMap.remove("root");
+            for (Map.Entry<String, FieldInfo> kv : selFieldMap.entrySet()) {
+                if (isRequestField(intQueryReq, kv)) {
+                    if (kv.getKey().startsWith(ACCESS_CONTROL_ATTRIBUTE_PREFIX)) {
+                        continue;
+                    }
+
+                    if (kv.getKey().endsWith(".guid") || kv.getKey().endsWith(".r_guid")) {
+                        if(!isRequestExplicitly(intQueryReq, (Map.Entry<String, FieldInfo>) kv)) {
+                            continue;
+                        }
+                    }
+
+                    selectedFields.add(kv.getValue());
+                    if (!selections.contains(kv.getValue().getExpression())) {
+                        selections.add(kv.getValue().getExpression());
+                    }
+                }
+            }
+
+            Map<String, Expression> selectionMap = new HashMap<>();
+            Map<String, Class<?>> fieldTypeMap = new HashMap<>();
+            selFieldMap.forEach((k, v) -> {
+                fieldTypeMap.put(k, v.getType());
+                selectionMap.put(k, v.getExpression());
+            });
+
+            List<Predicate> predicates = buildHistoryDataControlPredicate(intQueryReq, cb, selectionMap);
+
+            Predicate accessControlPredicate = buildAccessControlPredicate(cb, selFieldMap, selectionMap);
+
+            JpaQueryUtils.applyFilter(cb, query, intQueryReq.getFilters(), selectionMap, fieldTypeMap, FilterRelationship.fromCode(intQueryReq.getFilterRs()), predicates, accessControlPredicate);
+
+            TypedQuery typedQuery = entityManager.createQuery(query);
+            typedQuery.setHint("javax.persistence.fetchgraph", rootEg);
+            List resultList = typedQuery.getResultList();
+
+            Set resultSet = renderTreeResult(intQueryDto,intQueryReq, Sets.newHashSet(resultList),null,null);
+
+            return Lists.newArrayList(resultSet);
+        } finally {
+            priEntityManager.close();
+        }
+    }
+
+    private Set renderTreeResult(IntegrationQueryDto intQueryDto, QueryRequest intQueryReq, Object beanOrSet, DynamicEntityMeta parentEntityMeta,
+                                 Map<String,Object> parentRenderedMap) {
+        Set renderedSet = Sets.newHashSet();
+        List<Integer> attrIds = intQueryDto.getAttrs();
+        DynamicEntityMeta meta = getDynamicEntityMeta(intQueryDto.getCiTypeId());
+        if(beanOrSet instanceof  Set) {
+            Set resultBeans = (Set) beanOrSet;
+
+            for (Object bean : resultBeans) {
+                renderSingleNode(intQueryDto, intQueryReq, parentEntityMeta, parentRenderedMap, renderedSet, attrIds, meta, bean);
+            }
+        }else{
+            renderSingleNode(intQueryDto, intQueryReq, parentEntityMeta, parentRenderedMap, renderedSet, attrIds, meta, beanOrSet);
+        }
+        return renderedSet;
+    }
+
+    private void renderSingleNode(IntegrationQueryDto intQueryDto, QueryRequest intQueryReq, DynamicEntityMeta parentEntityMeta, Map<String, Object> parentRenderedMap,
+                                  Set renderedSet, List<Integer> attrIds, DynamicEntityMeta meta, Object bean) {
+        DynamicEntityHolder entityHolder = new DynamicEntityHolder(meta, bean);
+        Map<String, Object> curRenderedMap = new HashMap<>();
+        for (int i = 0; i < attrIds.size(); i++) {
+            String attrAlias = intQueryDto.getAttrKeyNames().get(i);
+            if (intQueryReq.getResultColumns().contains(attrAlias)) {
+                FieldNode fieldNode = meta.getFieldNode(attrIds.get(i));
+                String column = fieldNode.getColumn();
+                curRenderedMap.put(column, entityHolder.get(column));
+            }
+        }
+        renderedSet.add(curRenderedMap);
+
+        if (intQueryDto.getParentRs() != null) {
+            Relationship rs = intQueryDto.getParentRs();
+            int attrId = rs.getAttrId();
+            String column = "";
+            if (rs.getIsReferedFromParent()) {
+                FieldNode fieldNode = parentEntityMeta.getFieldNode(attrId);
+                column = fieldNode.getColumn();
+            } else {
+                FieldNode fieldNode = meta.getFieldNode(attrId);
+                column = fieldNode.getColumn();
+            }
+            AdmCiType parentCiType = ciTypeRepository.getOne(parentEntityMeta.getCiTypeId());
+            AdmCiTypeAttr reltAttr = ciTypeAttrRepository.getOne(attrId);
+            String joinField = getJoinFieldName(rs, parentCiType, reltAttr);
+            Object parentRefElement = parentRenderedMap.get(joinField);
+            if(parentRefElement instanceof  Set){
+                ((Set)parentRefElement).add(curRenderedMap);
+            }else{
+                parentRenderedMap.put(column, curRenderedMap);
+            }
+
+        }
+
+        List<IntegrationQueryDto> children = intQueryDto.getChildren();
+        for (IntegrationQueryDto child : children) {
+            Relationship rs = child.getParentRs();
+            AdmCiType parentCiType = ciTypeRepository.getOne(intQueryDto.getCiTypeId());
+            AdmCiTypeAttr reltAttr = ciTypeAttrRepository.getOne(rs.getAttrId());
+            String joinField = getJoinFieldName(rs, parentCiType, reltAttr);
+            Object childBean = entityHolder.get(joinField);
+            if (childBean instanceof Set) {
+                curRenderedMap.put(joinField, new HashSet());
+            }
+            renderTreeResult(child, intQueryReq, childBean, meta, curRenderedMap);
+        }
+    }
+
+    private String getJoinFieldName(Relationship rs, AdmCiType parentCiType, AdmCiTypeAttr reltAttr) {
+        String joinField;
+        if (rs.getIsReferedFromParent()) {
+            joinField = DynamicEntityUtils.getJoinFieldName(parentCiType, reltAttr, true);
+        } else {
+            joinField = DynamicEntityUtils.getJoinFieldName(parentCiType, reltAttr, false);
+        }
+        return joinField;
+    }
+
+    private Map<String, FieldInfo> buildIntQueryAsTree(From parentPath, AdmCiType parentCiType, IntegrationQueryDto curQuery, CriteriaQuery query,
+                                                       Map<String, FieldInfo> attrExprMap, Stack<String> path, EntityGraph rootEg, Subgraph subgraph) {
+        if (path == null) {
+            path = new Stack<>();
+        }
+
+        int curCiTypeId = curQuery.getCiTypeId();
+        DynamicEntityMeta entityMeta = getDynamicEntityMetaMap().get(curCiTypeId);
+        AdmCiType curCiType = ciTypeRepository.getOne(curCiTypeId);
+        if (CiStatus.NotCreated.getCode().equals(curCiType.getStatus())) {
+            throw new InvalidArgumentException(String.format("Can not build integration as the given CiType [%s], status is [%s].", curCiType.getName(), curCiType.getStatus()));
+        }
+        path.push(curCiType.getTableName());
+
+        Map<String, FieldInfo> currentCiTypeAttrExprMap = new HashMap<>();
+        From curFrom = null;
+        Subgraph curSubgraph = null;
+        if (parentPath == null) {// root query
+            curFrom = query.from(entityMeta.getEntityClazz());
+            attrExprMap.put("root", new FieldInfo(curFrom, entityMeta.getEntityClazz(), curCiTypeId, null, "root", null,null));
+
+            List<Integer> attrIds = curQuery.getAttrs();
+            for (int i = 0; i < attrIds.size(); i++) {
+                AdmCiTypeAttr attr = ciTypeAttrRepository.getOne(attrIds.get(i));
+                validateStatusOfCiTypeAttr(attr);
+                String keyName = curQuery.getAttrKeyNames().get(i);
+                Expression attrExpression = null;
+                if(InputType.MultSelDroplist.getCode().equals(attr.getInputType())) {
+                    attrExpression = curFrom.get("guid");//need guid to fetch mult selection value
+                }else if(InputType.MultRef.getCode().equals(attr.getInputType())){
+                    attrExpression = curFrom.get("guid");//need guid to fetch mult ref value
+                }else {
+                    attrExpression = curFrom.get(attr.getPropertyName());
+                }
+                attrExpression.alias(keyName);
+                if (attrExprMap.containsKey(keyName)) {
+                    throw new ServiceException(String.format("There are duplicated alias [%s] for integrate query [%s].", keyName, curQuery.getName()));
+                }
+                attrExprMap.put(keyName, new FieldInfo(attrExpression, FieldType.getTypeFromCode(attr.getPropertyType()), attr.getCiTypeId(), attr.getInputType(), attr.getName(), attr.getIdAdmCiTypeAttr(),keyName));
+                currentCiTypeAttrExprMap.put(attr.getPropertyName(), attrExprMap.get(keyName));
+            }
+        } else {
+            Relationship relt = curQuery.getParentRs();
+            if (relt == null) {
+                throw new InvalidArgumentException(String.format("There is not parent relationship for CiType [%d]", curQuery.getCiTypeId()));
+            }
+            int reltAttrId = relt.getAttrId();
+            AdmCiTypeAttr reltAttr = ciTypeAttrRepository.getOne(reltAttrId);
+            validateStatusOfCiTypeAttr(reltAttr);
+            String joinField = null;
+            if(relt.getIsReferedFromParent()) {
+                joinField = DynamicEntityUtils.getJoinFieldName(parentCiType, reltAttr, true);
+                curFrom = parentPath.join(joinField, JoinType.LEFT);
+            } else {
+                joinField = DynamicEntityUtils.getJoinFieldName(parentCiType, reltAttr, false);
+                curFrom = parentPath.join(joinField, JoinType.LEFT);
+            }
+
+            if(path.size()==2){
+                curSubgraph = rootEg.addSubgraph(joinField);
+            }else{
+                if(subgraph != null){
+                    curSubgraph = subgraph.addSubgraph(joinField);
+                }else{
+                    logger.warn("subgraph is null, cur ci type:{}",curCiType.getTableName());
+                }
+            }
+
+            List<Integer> attrIds = curQuery.getAttrs();
+            for (int i = 0; i < attrIds.size(); i++) {
+                AdmCiTypeAttr attr = ciTypeAttrRepository.getOne(attrIds.get(i));
+                validateStatusOfCiTypeAttr(attr);
+                String keyName = curQuery.getAttrKeyNames().get(i);
+                Expression attrExpression = null;
+
+                if(InputType.MultSelDroplist.getCode().equals(attr.getInputType())) {
+                    attrExpression = curFrom.get("guid");//need guid to fetch mult selection value
+                }else if(InputType.MultRef.getCode().equals(attr.getInputType())){
+                    attrExpression = curFrom.get("guid");//need guid to fetch mult ref value
+                }else {
+                    attrExpression = curFrom.get(attr.getPropertyName());
+                }
+
+                attrExpression.alias(keyName);
+                if (attrExprMap.containsKey(keyName)) {
+                    throw new ServiceException(String.format("There are duplicated alias [%s] for integrate query [%s].", keyName, curQuery.getName()));
+                }
+                attrExprMap.put(keyName, new FieldInfo(attrExpression, FieldType.getTypeFromCode(attr.getPropertyType()), attr.getCiTypeId(), attr.getInputType(), attr.getName(), attr.getIdAdmCiTypeAttr(),keyName));
+                currentCiTypeAttrExprMap.put(attr.getPropertyName(), attrExprMap.get(keyName));
+            }
+        }
+
+        String curQueryKeyName = curQuery.getKeyName();
+        attachAdditionalAttr(attrExprMap, path, curCiTypeId, curFrom, "guid", curQueryKeyName);
+        attachAdditionalAttr(attrExprMap, path, curCiTypeId, curFrom, "r_guid",curQueryKeyName);
+
+        List<AdmCiTypeAttr> accessControlledAttributes = ciTypeAttrRepository.findAllByCiTypeIdAndIsAccessControlled(curCiTypeId, 1);
+        if (isNotEmpty(accessControlledAttributes)) {
+            for (AdmCiTypeAttr attr : accessControlledAttributes) {
+                String propertyName = attr.getPropertyName();
+                String keyName = String.format(ACCESS_CONTROL_ATTRIBUTE_FORMAT, curCiTypeId, propertyName);
+                FieldInfo fieldInfo = currentCiTypeAttrExprMap.get(propertyName);
+                if (fieldInfo == null) {
+                    Expression attrExpression = curFrom.get(propertyName);
+                    attrExpression.alias(keyName);
+                    fieldInfo = new FieldInfo(attrExpression, FieldType.getTypeFromCode(attr.getPropertyType()), attr.getCiTypeId(), attr.getInputType(), attr.getName(), attr.getIdAdmCiTypeAttr(),keyName);
+                }
+                attrExprMap.put(keyName, fieldInfo);
+            }
+        }
+
+        for (IntegrationQueryDto child : curQuery.getChildren()) {
+            buildIntQueryAsTree(curFrom, curCiType, child, query, attrExprMap, path, rootEg, curSubgraph);
+        }
+
+        path.pop();
+        return attrExprMap;
     }
 
     private boolean isRequestExplicitly(QueryRequest intQueryReq, Map.Entry<String, FieldInfo> kv) {
@@ -1553,63 +1733,8 @@ public class CiServiceImpl implements CiService {
         return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
     }
 
-    private void processBizFilters(QueryRequest intQueryReq, Map<String, Expression> selectionMap) {
-        Filter bizKeyFilter = null;
-        Filter statusFilter = null;
-        for (Filter filter : intQueryReq.getFilters()) {
-            if ("biz_key".equals(filter.getName())) {
-                bizKeyFilter = filter;
-            }
-
-            if ("state".equals(filter.getName())) {
-                statusFilter = filter;
-            }
-        }
-        intQueryReq.getFilters().remove(bizKeyFilter);
-        intQueryReq.getFilters().remove(statusFilter);
-
-        if (statusFilter == null || bizKeyFilter == null)
-            throw new InvalidArgumentException("biz_key and state filters should be existed together.");
-
-        for (Map.Entry<String, Expression> kv : selectionMap.entrySet()) {
-            if (kv.getKey().endsWith(".biz_key")) {
-                intQueryReq.getFilters().add(new Filter(kv.getKey(), bizKeyFilter.getOperator(), bizKeyFilter.getValue()));
-            } else if (kv.getKey().endsWith(".state")) {
-                intQueryReq.getFilters().add(new Filter(kv.getKey(), statusFilter.getOperator(), statusFilter.getValue()));
-            }
-        }
-    }
-
-    private boolean checkBizEnable(QueryRequest intQueryReq) {
-        boolean enableBiz = false;
-        ;
-        boolean filterBizKey = false;
-        boolean filterStatus = false;
-        if (intQueryReq.getFilters() != null && intQueryReq.getFilters().size() > 0) {
-            for (Filter filter : intQueryReq.getFilters()) {
-                if ("biz_key".equals(filter.getName())) {
-                    filterBizKey = true;
-                }
-                if ("state".equals(filter.getName())) {
-                    filterStatus = true;
-                }
-            }
-        }
-        if (filterBizKey && filterStatus) {
-            enableBiz = true;
-        }
-
-        return enableBiz;
-    }
-
-    private void validateIntQueryFilter(QueryRequest intQueryReq, Map<String, FieldInfo> selFieldMap, boolean enableBiz) {
+    private void validateIntQueryFilter(QueryRequest intQueryReq, Map<String, FieldInfo> selFieldMap) {
         intQueryReq.getFilters().forEach(x -> {
-            if (enableBiz) {
-                if ("biz_key".equals(x.getName()) || "state".equals(x.getName())) {
-                    return;
-                }
-            }
-
             if (!selFieldMap.containsKey(x.getName())) {
                 throw new InvalidArgumentException(String.format("The given fileter name [%s] can not be found out in integration query criteria. ", x.getName()));
             }
@@ -1730,7 +1855,8 @@ public class CiServiceImpl implements CiService {
         return sb.toString();
     }
 
-    private Map<String, FieldInfo> buildIntQuery(From parentPath, AdmCiType parentCiType, IntegrationQueryDto curQuery, CriteriaQuery query, Map<String, FieldInfo> attrExprMap, boolean enableBiz, Stack<String> path) {
+    private Map<String, FieldInfo> buildIntQuery(From parentPath, AdmCiType parentCiType, IntegrationQueryDto curQuery, CriteriaQuery query,
+                                                     Map<String, FieldInfo> attrExprMap, Stack<String> path) {
         if (path == null) {
             path = new Stack<>();
         }
@@ -1818,11 +1944,6 @@ public class CiServiceImpl implements CiService {
         attachAdditionalAttr(attrExprMap, path, curCiTypeId, curFrom, "guid", curQueryKeyName);
         attachAdditionalAttr(attrExprMap, path, curCiTypeId, curFrom, "r_guid",curQueryKeyName);
      
-        if (enableBiz) {
-            attachAdditionalAttr(attrExprMap, path, curCiTypeId, curFrom, "biz_key",curQueryKeyName);
-            attachAdditionalAttr(attrExprMap, path, curCiTypeId, curFrom, "state",curQueryKeyName);
-        }
-
         List<AdmCiTypeAttr> accessControlledAttributes = ciTypeAttrRepository.findAllByCiTypeIdAndIsAccessControlled(curCiTypeId, 1);
         if (isNotEmpty(accessControlledAttributes)) {
             for (AdmCiTypeAttr attr : accessControlledAttributes) {
@@ -1839,7 +1960,7 @@ public class CiServiceImpl implements CiService {
         }
 
         for (IntegrationQueryDto child : curQuery.getChildren()) {
-            buildIntQuery(curFrom, curCiType, child, query, attrExprMap, false, path);
+            buildIntQuery(curFrom, curCiType, child, query, attrExprMap, path);
         }
 
         path.pop();
@@ -2000,49 +2121,65 @@ public class CiServiceImpl implements CiService {
         QueryRequest queryRequest = adhocQueryRequest.getQueryRequest();
         validateForQuery(intQueryDto);
 
+        return doIntegrateQuery(intQueryDto,queryRequest);
+
+    }
+
+    private QueryResponse doIntegrateQuery(IntegrationQueryDto intQueryDto, QueryRequest queryRequest) {
         List<FieldInfo> selectedFields = new LinkedList<>();
-        List<Filter> srcFilters = null;
-        try {
-            srcFilters = CollectionUtils.clone(queryRequest.getFilters(), Lists.newLinkedList());
-        } catch (CloneNotSupportedException e) {
-            throw new ServiceException("Failed to clone int query filters.", e);
-        }
+        if(queryRequest.getDialect().getTreeResult()){
+            logger.info("Execute integrate query as tree result.");
 
-        List resultList = doIntegrateQuery(intQueryDto, queryRequest, true, selectedFields);
-        int totalCount = convertResultToInteger(resultList);
+            List results = doIntegrateQueryAsTree(intQueryDto,queryRequest,selectedFields);
+            QueryResponse response = new QueryResponse(null, results);
+            return response;
 
-        queryRequest.setFilters(srcFilters);
-        resultList = doIntegrateQuery(intQueryDto, queryRequest, false, selectedFields);
+        }else {
+            logger.info("Execute integrate query as flat result.");
 
-        List<Expression> selections = new LinkedList<>();
-        selectedFields.forEach(field -> {
-        	if(!selections.contains(field.getExpression())) {
-        		selections.add(field.getExpression());
-        	}
-        });
-
-        List<Map<String, Object>> results = new LinkedList<>();
-        // muti columns result
-        if (selections.size() > 1) {
-            List<Object[]> rows = resultList;
-            for (int i = 0; i < rows.size(); i++) {
-                Object[] obj = rows.get(i);
-                results.add(convertResponse(selections, obj, selectedFields));
+            List<Filter> srcFilters = null;
+            try {
+                srcFilters = CollectionUtils.clone(queryRequest.getFilters(), Lists.newLinkedList());
+            } catch (CloneNotSupportedException e) {
+                throw new ServiceException("Failed to clone int query filters.", e);
             }
-        } else {
-            List<Object> rows = resultList;
-            for (int i = 0; i < rows.size(); i++) {
-                results.add(convertResponse(selections, new Object[]{rows.get(i)}, selectedFields));
+
+            List resultList = doIntegrateQueryAsFlat(intQueryDto, queryRequest, true, selectedFields);
+            int totalCount = convertResultToInteger(resultList);
+
+            queryRequest.setFilters(srcFilters);
+            resultList = doIntegrateQueryAsFlat(intQueryDto, queryRequest, false, selectedFields);
+
+            List<Expression> selections = new LinkedList<>();
+            selectedFields.forEach(field -> {
+                if (!selections.contains(field.getExpression())) {
+                    selections.add(field.getExpression());
+                }
+            });
+
+            List<Map<String, Object>> results = new LinkedList<>();
+            // muti columns result
+            if (selections.size() > 1) {
+                List<Object[]> rows = resultList;
+                for (int i = 0; i < rows.size(); i++) {
+                    Object[] obj = rows.get(i);
+                    results.add(convertResponse(selections, obj, selectedFields));
+                }
+            } else {
+                List<Object> rows = resultList;
+                for (int i = 0; i < rows.size(); i++) {
+                    results.add(convertResponse(selections, new Object[]{rows.get(i)}, selectedFields));
+                }
             }
-        }
 
-        QueryResponse response = new QueryResponse(null, results);
-        setupPageInfo(queryRequest, totalCount, response);
+            QueryResponse response = new QueryResponse(null, results);
+            setupPageInfo(queryRequest, totalCount, response);
 
-        if (logger.isDebugEnabled()) {
-            logger.debug("Return integrate response:{}", JsonUtil.toJsonString(response));
+            if (logger.isDebugEnabled()) {
+                logger.debug("Return integrate response:{}", JsonUtil.toJsonString(response));
+            }
+            return response;
         }
-        return response;
     }
 
     private void validateForQuery(IntegrationQueryDto intQueryDto) {

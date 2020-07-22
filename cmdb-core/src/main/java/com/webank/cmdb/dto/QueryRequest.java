@@ -28,6 +28,7 @@ public class QueryRequest {
 
     public static class Dialect {
         private boolean showCiHistory = false;
+        private boolean treeResult = false;
         private Map<String, Object> associatedData = new HashMap<>();
 
         public boolean getShowCiHistory() {
@@ -46,6 +47,13 @@ public class QueryRequest {
             this.associatedData = associatedData;
         }
 
+        public boolean getTreeResult() {
+            return treeResult;
+        }
+
+        public void setTreeResult(boolean treeResult) {
+            this.treeResult = treeResult;
+        }
     }
 
     public List<String> getGroupBys() {
