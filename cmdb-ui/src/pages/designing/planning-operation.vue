@@ -12,11 +12,8 @@
       <div class="parent-title">{{ $t('current_node') }}：</div>
       <Collapse v-model="parentPanal" class="parentCollapse" accordion @on-change="openParentPanal">
         <Panel name="1">
-          <Tooltip :delay="500" placement="top">
-            <span> {{ parentPanalData.data.key_name | filterCode }}</span>
-            <div slot="content" style="white-space: normal;">
-              {{ parentPanalData.data.key_name }}
-            </div>
+          <Tooltip :delay="500" placement="top" max-width="300" :content="parentPanalData.data.key_name">
+            <span>{{ parentPanalData.data.key_name | filterCode }}</span>
           </Tooltip>
           <div slot="content">
             <Form>
@@ -109,11 +106,8 @@
           :key="groupingKeyIndex + 'b'"
         >
           <Panel :name="panal.guid" v-for="(panal, panalIndex) in groupingNode[groupingKey]" :key="panalIndex">
-            <Tooltip :delay="500" placement="top">
+            <Tooltip :delay="500" placement="top" max-width="300" :content="panal.data.key_name">
               <span>{{ panal.data.key_name | filterCode }}</span>
-              <div slot="content" style="white-space: normal;">
-                {{ panal.data.key_name }}
-              </div>
             </Tooltip>
             <template v-if="panal.data.meta">
               <template v-for="opera in panal.data.meta.nextOperations">
@@ -326,11 +320,8 @@
           :key="groupingKeyIndex + 'f'"
         >
           <Panel :name="link.guid" v-for="(link, linkIndex) in groupingLink[groupingKey]" :key="linkIndex">
-            <Tooltip :delay="500" placement="top">
+            <Tooltip :delay="500" placement="top" max-width="300" :content="link.key_name">
               <span>{{ link.key_name | filterCode }}</span>
-              <div slot="content" style="white-space: normal;">
-                {{ link.key_name }}
-              </div>
             </Tooltip>
             <template v-if="link.meta.nextOperations">
               <template v-for="opera in setNextOperations(link.meta.nextOperations)">
@@ -1226,7 +1217,7 @@ export default {
   filters: {
     filterCode: function (val) {
       if (val) {
-        return val.length > 20 ? val.substring(0, 20) + '...' : val
+        return val.length > 30 ? val.substring(0, 30) + '...' : val
       }
     }
   },
