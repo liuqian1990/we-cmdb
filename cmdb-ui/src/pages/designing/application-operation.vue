@@ -483,11 +483,11 @@ export default {
             let tmp = []
             if (activePanalData[key + '_tmp']) {
               tmp = activePanalData[key + '_tmp'].map(_ => {
-                return _.guid || _.codeId
+                return _.guid || _.data.guid || _.codeId || _.data.codeId
               })
             } else {
               tmp = activePanalData[key].map(_ => {
-                return _.data.guid || _.data.codeId
+                return _.guid || _.data.guid || _.codeId || _.data.codeId
               })
             }
             tmpPanalData[key] = tmp
@@ -565,11 +565,11 @@ export default {
             let tmp = []
             if (activePanalData[key + '_tmp']) {
               tmp = activePanalData[key + '_tmp'].map(_ => {
-                return _.data.guid || _.data.codeId
+                return _.guid || _.data.guid || _.codeId || _.data.codeId
               })
             } else {
               tmp = activePanalData[key].map(_ => {
-                return _.data.guid || _.data.codeId
+                return _.guid || _.data.guid || _.codeId || _.data.codeId
               })
             }
             tmpPanalData[key] = tmp
