@@ -13,7 +13,6 @@ import com.webank.cmdb.config.ApplicationProperties.UIProperties;
 import org.springframework.orm.jpa.support.OpenEntityManagerInViewFilter;
 
 @Configuration
-@EnableCaching
 @ComponentScan({ "com.webank.cmdb.service", "com.webank.cmdb.support.mvc", "com.webank.cmdb.util","com.webank.cmdb.support.cache" })
 @Import({ DatabaseConfig.class })
 @EnableConfigurationProperties({ ApplicationProperties.class ,DatasourceProperties.class, UIProperties.class, SecurityProperties.class})

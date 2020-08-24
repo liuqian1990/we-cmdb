@@ -9,7 +9,7 @@ import org.springframework.cache.CacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCache;
 import org.springframework.stereotype.Component;
 
-@Component
+//@Component("requestScopedCacheManager")
 public class RequestScopedCacheManager implements CacheManager {
 
     private static final ThreadLocal<Map<String, Cache>> threadLocalCache = new ThreadLocal<Map<String, Cache>>() {
@@ -30,7 +30,7 @@ public class RequestScopedCacheManager implements CacheManager {
         return cache;
     }
 
-    private Cache createCache(String name) {
+    protected Cache createCache(String name) {
         return new ConcurrentMapCache(name);
     }
 

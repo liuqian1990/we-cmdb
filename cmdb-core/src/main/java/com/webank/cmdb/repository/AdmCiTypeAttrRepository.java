@@ -48,8 +48,17 @@ public interface AdmCiTypeAttrRepository extends JpaRepository<AdmCiTypeAttr, In
 
     List<AdmCiTypeAttr> findByInputTypeAndCiTypeId(String inputType, Integer ciTypeId);
 
-    @Cacheable("admCiTypeAttrRepository-findFirstByCiTypeIdAndPropertyName")
     AdmCiTypeAttr findFirstByCiTypeIdAndPropertyName(int ciTypeId, String propertyName);
+
+//    @Cacheable("admCiTypeAttrRepository-findFirstByCiTypeIdAndPropertyName")
+    default AdmCiTypeAttr findFirstByCiTypeIdAndPropertyName(DomainCachableAdmCiTypeAttrRepository domainCachableAdmCiTypeAttrRepository,int ciTypeId, String propertyName){
+        List<AdmCiTypeAttr> ciTypeAttrs = domainCachableAdmCiTypeAttrRepository.findByCiTypeIdAndPropertyName(ciTypeId,propertyName);
+        if(ciTypeAttrs != null && ciTypeAttrs.size()>0) {
+            return ciTypeAttrs.get(0);
+        }else{
+            return null;
+        }
+    }
 
     @Query(value = "SELECT * FROM adm_ci_type_attr WHERE id_adm_ci_type = :ciTypeId and edit_is_null =:isNullable AND is_auto = :isAuto", nativeQuery = true)
     List<AdmCiTypeAttr> findWithNullableAndIsAuto(@Param("ciTypeId") int ciTypeId, @Param("isNullable") int isNullable, @Param("isAuto") int isAuto);

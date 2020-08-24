@@ -9,6 +9,7 @@ import com.webank.cmdb.dto.*;
 import com.webank.cmdb.dynamicEntity.DynamicEntityHolder;
 import com.webank.cmdb.dynamicEntity.DynamicEntityMeta;
 import com.webank.cmdb.dynamicEntity.FieldNode;
+import com.webank.cmdb.repository.DomainCachableAdmCiTypeAttrRepository;
 import com.webank.cmdb.support.exception.InvalidArgumentException;
 import com.webank.cmdb.repository.AdmBasekeyCodeRepository;
 import com.webank.cmdb.repository.AdmCiTypeAttrRepository;
@@ -45,6 +46,8 @@ public class CiDataInterceptorService {
     private AdmCiTypeRepository ciTypeRepository;
     @Autowired
     private AdmCiTypeAttrRepository ciTypeAttrRepository;
+    @Autowired
+    private DomainCachableAdmCiTypeAttrRepository domainCachableAdmCiTypeAttrRepository;
     @Autowired
     private AdmBasekeyCodeRepository codeRepisotory;
     @Autowired
@@ -85,7 +88,7 @@ public class CiDataInterceptorService {
 
     private void validateRegularExpressionRule(DynamicEntityHolder entityHolder, Map ciBeanMap) {
         int ciTypeId = entityHolder.getEntityMeta().getCiTypeId();
-        List<AdmCiTypeAttr> attrs = ciTypeAttrRepository.findAllByCiTypeId(ciTypeId);
+        List<AdmCiTypeAttr> attrs = domainCachableAdmCiTypeAttrRepository.findAllByCiTypeId(ciTypeId);
         if (attrs != null && !attrs.isEmpty()) {
             attrs.forEach(attr -> {
                 if ((InputType.Text.getCode().equals(attr.getInputType()) || InputType.TextArea.getCode().equals(attr.getInputType())) && !StringUtils.isBlank(attr.getRegularExpressionRule())) {
@@ -100,7 +103,7 @@ public class CiDataInterceptorService {
 
     private void validateCiTypeAttrStatus(DynamicEntityHolder entityHolder, BeanMap ciBeanMap) {
         int ciTypeId = entityHolder.getEntityMeta().getCiTypeId();
-        List<AdmCiTypeAttr> attrs = ciTypeAttrRepository.findAllByCiTypeId(ciTypeId);
+        List<AdmCiTypeAttr> attrs = domainCachableAdmCiTypeAttrRepository.findAllByCiTypeId(ciTypeId);
         if (attrs != null && !attrs.isEmpty()) {
             attrs.forEach(attr -> {
                 Object val = ciBeanMap.get(attr.getPropertyName());
@@ -143,7 +146,7 @@ public class CiDataInterceptorService {
 
     private void validateIsAutoField(DynamicEntityHolder entityHolder, Map<String, Object> updatingCi) {
         int ciTypeId = entityHolder.getEntityMeta().getCiTypeId();
-        List<AdmCiTypeAttr> attrs = ciTypeAttrRepository.findByCiTypeIdAndIsAuto(ciTypeId, 1);
+        List<AdmCiTypeAttr> attrs = domainCachableAdmCiTypeAttrRepository.findByCiTypeIdAndIsAuto(ciTypeId, 1);
         if (attrs != null && !attrs.isEmpty()) {
             attrs.forEach(attr -> {
                 Object val = updatingCi.get(attr.getPropertyName());
@@ -158,7 +161,7 @@ public class CiDataInterceptorService {
     }
 
     private void validateUniqueField(Integer ciTypeId, Map ciData) {
-        List<AdmCiTypeAttr> attrs = ciTypeAttrRepository.findByCiTypeIdAndEditIsOnly(ciTypeId, 1);
+        List<AdmCiTypeAttr> attrs = domainCachableAdmCiTypeAttrRepository.findByCiTypeIdAndEditIsOnly(ciTypeId, 1);
         if (attrs != null && !attrs.isEmpty()) {
             attrs.forEach(attr -> {
                 Object val = ciData.get(attr.getPropertyName());
@@ -173,7 +176,7 @@ public class CiDataInterceptorService {
     }
 
     private void validateUniqueFieldForUpdate(Integer ciTypeId, Map<String, Object> ciData) {
-        List<AdmCiTypeAttr> attrs = ciTypeAttrRepository.findByCiTypeIdAndEditIsOnly(ciTypeId, 1);
+        List<AdmCiTypeAttr> attrs = domainCachableAdmCiTypeAttrRepository.findByCiTypeIdAndEditIsOnly(ciTypeId, 1);
         if (attrs != null && !attrs.isEmpty()) {
             attrs.forEach(attr -> {
                 Object newValue = ciData.get(attr.getPropertyName());
@@ -285,7 +288,7 @@ public class CiDataInterceptorService {
 
     private void handleAutoFill(DynamicEntityHolder entityHolder, EntityManager entityManager) {
         int ciTypeId = entityHolder.getEntityMeta().getCiTypeId();
-        List<AdmCiTypeAttr> attrs = ciTypeAttrRepository.findAllByCiTypeId(ciTypeId);
+        List<AdmCiTypeAttr> attrs = domainCachableAdmCiTypeAttrRepository.findAllByCiTypeId(ciTypeId);
         if (attrs != null && !attrs.isEmpty()) {
             attrs.forEach(attr -> {
                 if (attr.getIsAuto() == CmdbConstants.IS_AUTO_YES && !StringUtils.isBlank(attr.getAutoFillRule())) {
@@ -565,7 +568,7 @@ public class CiDataInterceptorService {
     }
 
     private Integer getAttrIdByPropertyNameAndCiTypeId(int ciTypeId, String propertyName) {
-        List<AdmCiTypeAttr> attrs = ciTypeAttrRepository.findAllByCiTypeId(ciTypeId);
+        List<AdmCiTypeAttr> attrs = domainCachableAdmCiTypeAttrRepository.findAllByCiTypeId(ciTypeId);
         for (AdmCiTypeAttr attr : attrs) {
             if (propertyName.equalsIgnoreCase(attr.getPropertyName())) {
                 return attr.getIdAdmCiTypeAttr();
@@ -589,7 +592,7 @@ public class CiDataInterceptorService {
     }
 
     private void validateValueType(DynamicEntityHolder entityHolder, Map cloneCi) {
-        List<AdmCiTypeAttr> attrs = ciTypeAttrRepository.findAllByCiTypeId(entityHolder.getEntityMeta().getCiTypeId());
+        List<AdmCiTypeAttr> attrs = domainCachableAdmCiTypeAttrRepository.findAllByCiTypeId(entityHolder.getEntityMeta().getCiTypeId());
         attrs.forEach(attr -> {
             String inputType = attr.getInputType();
             String name = attr.getPropertyName();
@@ -607,7 +610,7 @@ public class CiDataInterceptorService {
     // can not update not editable field
     private void validateNotEditable(DynamicEntityHolder entityHolder, Map<String, Object> ci) {
         int ciTypeId = entityHolder.getEntityMeta().getCiTypeId();
-        List<AdmCiTypeAttr> attrs = ciTypeAttrRepository.findByCiTypeIdAndEditIsEditable(ciTypeId, 0);
+        List<AdmCiTypeAttr> attrs = domainCachableAdmCiTypeAttrRepository.findByCiTypeIdAndEditIsEditable(ciTypeId, 0);
         if (attrs != null && !attrs.isEmpty()) {
             attrs.forEach(attr -> {
                 Object val = ci.get(attr.getPropertyName());
@@ -652,7 +655,7 @@ public class CiDataInterceptorService {
 
     public void handleReferenceAutoFill(DynamicEntityHolder entityHolder, EntityManager entityManager, Map<String, Object> ci) {
         int ciTypeId = entityHolder.getEntityMeta().getCiTypeId();
-        List<AdmCiTypeAttr> attrs = ciTypeAttrRepository.findAllByCiTypeId(ciTypeId);
+        List<AdmCiTypeAttr> attrs = domainCachableAdmCiTypeAttrRepository.findAllByCiTypeId(ciTypeId);
         attrs.forEach(attr -> {
             if (ci.containsKey(attr.getPropertyName())) {
                 List<AdmCiTypeAttr> attrsWithMatchRule = ciTypeAttrRepository.findAllByMatchAutoFillRule("\\\\\\\"attrId\\\\\\\":" + attr.getIdAdmCiTypeAttr());

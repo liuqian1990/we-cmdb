@@ -52,6 +52,8 @@ public interface CiService extends CmdbService {
 
     List<Map<String, Object>> update(int ciTypeId, List<Map<String, Object>> cis);
 
+    List<Map<String, Object>> update(int ciTypeId, List<Map<String, Object>> cis, boolean enableEnrich);
+
     List<Map<String, Object>> create(int ciTypeId, List<Map<String, Object>> cis);
 
     void delete(int ciTypeId, List<String> ids);

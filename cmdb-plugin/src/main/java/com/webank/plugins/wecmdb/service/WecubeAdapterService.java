@@ -376,7 +376,7 @@ public class WecubeAdapterService {
 
     public List<Map<String, Object>> updateCiData(String entityName, List<Map<String, Object>> originRequest) {
         List<Map<String, Object>> convertedRequest = convertedRequest(originRequest);
-        List<Map<String, Object>> updatedCiData = ciService.update(retrieveCiTypeIdByTableName(entityName), convertedRequest);
+        List<Map<String, Object>> updatedCiData = ciService.update(retrieveCiTypeIdByTableName(entityName), convertedRequest,false);
         QueryRequest queryObject = QueryRequest.defaultQueryObject().addInFilter(GUID, updatedCiData.stream().map(item -> item.get(GUID)).collect(Collectors.toList()));
         return convertCiData(queryObject, retrieveCiTypeIdByTableName(entityName));
     }

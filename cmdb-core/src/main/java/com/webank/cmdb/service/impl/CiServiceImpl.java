@@ -132,6 +132,8 @@ public class CiServiceImpl implements CiService {
     @Autowired
     private AdmCiTypeAttrRepository ciTypeAttrRepository;
     @Autowired
+    private DomainCachableAdmCiTypeAttrRepository domainCachableAdmCiTypeAttrRepository;
+    @Autowired
     private SequenceService sequenceService;
     @Autowired
     private IntegrationQueryService intQueryService;
@@ -208,8 +210,8 @@ public class CiServiceImpl implements CiService {
                 return;
             }
 
-            List<AdmCiTypeAttr> attrs = ciTypeAttrRepository.findByInputTypeAndReferenceId(InputType.Reference.getCode(), ciType.getIdAdmCiType());
-            attrs.addAll(ciTypeAttrRepository.findByInputTypeAndReferenceId(InputType.MultRef.getCode(), ciType.getIdAdmCiType()));
+            List<AdmCiTypeAttr> attrs = domainCachableAdmCiTypeAttrRepository.findByInputTypeAndReferenceId(InputType.Reference.getCode(), ciType.getIdAdmCiType());
+            attrs.addAll(domainCachableAdmCiTypeAttrRepository.findByInputTypeAndReferenceId(InputType.MultRef.getCode(), ciType.getIdAdmCiType()));
 
             referedAttrMap.put(ciType.getIdAdmCiType(), attrs);
         });
@@ -414,7 +416,7 @@ public class CiServiceImpl implements CiService {
             }
         }
         if (ciRequest.getSorting() != null && !Strings.isNullOrEmpty(ciRequest.getSorting().getField())) {
-            AdmCiTypeAttr attr = ciTypeAttrRepository.findFirstByCiTypeIdAndPropertyName(ciTypeId, ciRequest.getSorting().getField());
+            AdmCiTypeAttr attr = ciTypeAttrRepository.findFirstByCiTypeIdAndPropertyName(domainCachableAdmCiTypeAttrRepository,ciTypeId, ciRequest.getSorting().getField());
             if (attr != null) {
                 if (InputType.MultRef.getCode().equals(attr.getInputType()) || InputType.MultSelDroplist.getCode().equals(attr.getInputType())) {
                     throw new InvalidArgumentException(String.format("Multiple reference and multiple selection feild [%s] don't support sorting.", ciRequest.getSorting().getField()));
@@ -462,7 +464,7 @@ public class CiServiceImpl implements CiService {
             Map<String, Expression> selectionMap = new LinkedHashMap<>();
             entityMeta.getAttrs().forEach(x -> {
 
-                AdmCiTypeAttr attr = ciTypeAttrRepository.findFirstByCiTypeIdAndPropertyName(entityMeta.getCiTypeId(), x);
+                AdmCiTypeAttr attr = ciTypeAttrRepository.findFirstByCiTypeIdAndPropertyName(domainCachableAdmCiTypeAttrRepository,entityMeta.getCiTypeId(), x);
                 if (attr == null) {
                     return;
                 }
@@ -581,7 +583,7 @@ public class CiServiceImpl implements CiService {
 
     private Map<String, Object> enrichCiObject(DynamicEntityMeta entityMeta, Map<String, Object> ciObjMap, EntityManager entityManager) {
         Map<String, Object> ciMap = new HashMap<>();
-        List<AdmCiTypeAttr> attrs = ciTypeAttrRepository.findAllByCiTypeId(entityMeta.getCiTypeId());
+        List<AdmCiTypeAttr> attrs = domainCachableAdmCiTypeAttrRepository.findAllByCiTypeId(entityMeta.getCiTypeId());
 
         Map<Integer, AdmCiTypeAttr> attrMap = new HashMap<>();
         for (AdmCiTypeAttr attr : attrs) {
@@ -970,7 +972,7 @@ public class CiServiceImpl implements CiService {
     
     @Override
     public List<Map<String, Object>> filterOfPassword(int ciTypeId, List<Map<String, Object>> cis){
-        List<AdmCiTypeAttr> attrs = ciTypeAttrRepository.findByInputTypeAndCiTypeId(InputType.Password.getCode(), ciTypeId);
+        List<AdmCiTypeAttr> attrs = domainCachableAdmCiTypeAttrRepository.findByInputTypeAndCiTypeId(InputType.Password.getCode(), ciTypeId);
         for (Map<String, Object> ci : cis) {
             attrs.forEach(attr -> {
                 String name = attr.getPropertyName();
@@ -983,9 +985,14 @@ public class CiServiceImpl implements CiService {
         return cis;
     }
 
-    @OperationLogPointcut(operation = Modification, objectClass = CiData.class)
     @Override
     public List<Map<String, Object>> update(@CiTypeId int ciTypeId,@CiDataType List<Map<String, Object>> cis) {
+        return update(ciTypeId,cis,true);
+    }
+
+    @OperationLogPointcut(operation = Modification, objectClass = CiData.class)
+    @Override
+    public List<Map<String, Object>> update(@CiTypeId int ciTypeId,@CiDataType List<Map<String, Object>> cis, boolean enableEnrich){
         if (logger.isDebugEnabled()) {
             logger.debug("CIs update request, ciTypeId:{}, query request:{}", ciTypeId, JsonUtil.toJsonString(cis));
         }
@@ -1017,10 +1024,15 @@ public class CiServiceImpl implements CiService {
 
                         Map<String, Object> updatedDomainMap = doUpdate(entityManager, ciTypeId, ci, true);
 
-                        Map<String, Object> enhacedMap = enrichCiObject(entityMeta, updatedDomainMap, entityManager);
+                        if(enableEnrich) {
+                            Map<String, Object> enhacedMap = enrichCiObject(entityMeta, updatedDomainMap, entityManager);
+                            enhacedMap.put(CALLBACK_ID, callbackId);
+                            rtnCis.add(enhacedMap);
+                        }else {
+                            updatedDomainMap.put(CALLBACK_ID, callbackId);
+                            rtnCis.add(updatedDomainMap);
+                        }
 
-                        enhacedMap.put(CALLBACK_ID, callbackId);
-                        rtnCis.add(enhacedMap);
                     } catch (Exception e) {
                         String errorMessage = String.format("Fail to update ci data ciTypeId [%s], error [%s]", ciTypeId, ExceptionHolder.extractExceptionMessage(e));
                         logger.warn(errorMessage, e);
@@ -1842,7 +1854,7 @@ public class CiServiceImpl implements CiService {
             attachAdditionalAttr(attrExprMap, path, curCiTypeId, curFrom, "state",curQueryKeyName);
         }
 
-        List<AdmCiTypeAttr> accessControlledAttributes = ciTypeAttrRepository.findAllByCiTypeIdAndIsAccessControlled(curCiTypeId, 1);
+        List<AdmCiTypeAttr> accessControlledAttributes = domainCachableAdmCiTypeAttrRepository.findAllByCiTypeIdAndIsAccessControlled(curCiTypeId, 1);
         if (isNotEmpty(accessControlledAttributes)) {
             for (AdmCiTypeAttr attr : accessControlledAttributes) {
                 String propertyName = attr.getPropertyName();
@@ -1872,7 +1884,7 @@ public class CiServiceImpl implements CiService {
     }
 
     private void attachAdditionalAttr(Map<String, FieldInfo> attrExprMap, Stack<String> path, int curCiTypeId, From curFrom, String propertyName,String curQueryKeyName) {
-        AdmCiTypeAttr attr = ciTypeAttrRepository.findFirstByCiTypeIdAndPropertyName(curCiTypeId, propertyName);
+        AdmCiTypeAttr attr = ciTypeAttrRepository.findFirstByCiTypeIdAndPropertyName(domainCachableAdmCiTypeAttrRepository,curCiTypeId, propertyName);
         validateStatusOfCiTypeAttr(attr);
         if (attr == null) {
             throw new ServiceException(String.format("Can not find out [%s] for CI Type [%d].", propertyName, curCiTypeId));
@@ -1976,7 +1988,7 @@ public class CiServiceImpl implements CiService {
 
             results.forEach(x -> {
                 CiDataTreeDto ci = conductCi(fromCiTypeId, cis, x);
-                List<AdmCiTypeAttr> attrs = ciTypeAttrRepository.findByInputTypeAndReferenceId("ref", fromCiTypeId);
+                List<AdmCiTypeAttr> attrs = domainCachableAdmCiTypeAttrRepository.findByInputTypeAndReferenceId("ref", fromCiTypeId);
                 if (attrs != null && !attrs.isEmpty()) {
                     List<CiDataTreeDto> ciChildren = new LinkedList<>();
                     ci.setChildren(ciChildren);
@@ -2217,7 +2229,7 @@ public class CiServiceImpl implements CiService {
 
         toEntityHolder.put(CmdbConstants.DEFAULT_FIELD_GUID, newGuid);
 
-        List<AdmCiTypeAttr> refreshableAttrs = ciTypeAttrRepository.findByCiTypeIdAndIsRefreshable(ciTypeId, 1);
+        List<AdmCiTypeAttr> refreshableAttrs = domainCachableAdmCiTypeAttrRepository.findByCiTypeIdAndIsRefreshable(ciTypeId, 1);
         refreshableAttrs.forEach(attr -> {
             fromBeanMap.put(attr.getPropertyName(), null);
         });
@@ -2252,9 +2264,9 @@ public class CiServiceImpl implements CiService {
         Stopwatch stopwatch = Stopwatch.createStarted();
         List<Map<String, Object>> dependentCis = Lists.newLinkedList();
         //Fetch attributes which enable delete validation.
-        List<AdmCiTypeAttr> referredAttrs = ciTypeAttrRepository.findByInputTypeAndReferenceIdAndStatusAndIsDeleteValidate(
+        List<AdmCiTypeAttr> referredAttrs = domainCachableAdmCiTypeAttrRepository.findByInputTypeAndReferenceIdAndStatusAndIsDeleteValidate(
                 InputType.Reference.getCode(), ciTypeId, CiStatus.Created.getCode(), 1);
-        referredAttrs.addAll(ciTypeAttrRepository.findByInputTypeAndReferenceIdAndStatusAndIsDeleteValidate(
+        referredAttrs.addAll(domainCachableAdmCiTypeAttrRepository.findByInputTypeAndReferenceIdAndStatusAndIsDeleteValidate(
                 InputType.MultRef.getCode(), ciTypeId, CiStatus.Created.getCode(),1));
 
     	referredAttrs.forEach(attr -> {
@@ -2297,7 +2309,7 @@ public class CiServiceImpl implements CiService {
     public List<Map<String, Object>> lookupReferenceToCis(int ciTypeId, String guid) {
         Stopwatch stopwatch = Stopwatch.createStarted();
         List<Map<String, Object>> dependentCis = Lists.newLinkedList();
-        List<AdmCiTypeAttr> referredAttrs = ciTypeAttrRepository.findByInputTypeAndCiTypeId(InputType.Reference.getCode(), ciTypeId);
+        List<AdmCiTypeAttr> referredAttrs = domainCachableAdmCiTypeAttrRepository.findByInputTypeAndCiTypeId(InputType.Reference.getCode(), ciTypeId);
         Map<String, Object> ci = getCi(ciTypeId, guid);
         ;
         referredAttrs.forEach(attr -> {
@@ -2321,7 +2333,7 @@ public class CiServiceImpl implements CiService {
     @Override
     public List<Map<String, Object>> lookupReferenceByCisWithFullData(int ciTypeId, String guid) {
         List<Map<String, Object>> dependentCis = Lists.newLinkedList();
-        List<AdmCiTypeAttr> referredAttrs = ciTypeAttrRepository.findByInputTypeAndReferenceId(InputType.Reference.getCode(), ciTypeId);
+        List<AdmCiTypeAttr> referredAttrs = domainCachableAdmCiTypeAttrRepository.findByInputTypeAndReferenceId(InputType.Reference.getCode(), ciTypeId);
         referredAttrs.forEach(attr -> {
             if (!CiStatus.Created.getCode().equals(attr.getStatus())) {
                 return;

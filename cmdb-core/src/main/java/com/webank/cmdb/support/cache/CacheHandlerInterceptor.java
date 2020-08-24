@@ -13,10 +13,13 @@ public class CacheHandlerInterceptor implements HandlerInterceptor{
 
     @Autowired
     private RequestScopedCacheManager requestScopedCacheManager;
+    @Autowired
+    private StaticDomainCacheManager staticDomainPropertyCacheManager;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         requestScopedCacheManager.clearCaches();
+        staticDomainPropertyCacheManager.clearCaches();
         return true;
     }
 
@@ -24,6 +27,7 @@ public class CacheHandlerInterceptor implements HandlerInterceptor{
     public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler,
             ModelAndView modelAndView) throws Exception {
         requestScopedCacheManager.clearCaches();
+        staticDomainPropertyCacheManager.clearCaches();
     }
 
 }
