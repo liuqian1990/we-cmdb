@@ -91,6 +91,11 @@ public class StaticDomainCacheManager<D,R extends JpaRepository<D,?>> extends Re
             return true;
         }
 
+        @Override
+        public void put(Object key, @Nullable Object value) {
+            return;
+        }
+
         private synchronized void loadDomainData(){
             String loadAllSql = domainClazz.getSimpleName() + ".findAll";
             TypedQuery query = entityManager.createNamedQuery(loadAllSql,domainClazz);
